@@ -518,7 +518,7 @@ class UpSet:
             data = gb[sum_over].sum()
         data = data.unstack(by).fillna(0)
         if isinstance(colors, str):
-            colors = matplotlib.cm.get_cmap(colors)
+            colors = matplotlib.colormaps[colors]
         elif isinstance(colors, typing.Mapping):
             colors = data.columns.map(colors).values
             if pd.isna(colors).any():
