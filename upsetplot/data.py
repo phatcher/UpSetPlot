@@ -164,7 +164,8 @@ def from_indicators(indicators, data=None):
     >>> # an indicator:
     >>> data = pd.DataFrame({"val1": [pd.NA, .7, pd.NA, .9],
     ...                      "val2": ["male", pd.NA, "female", "female"],
-    ...                      "val3": [pd.NA, pd.NA, 23000, 78000]})
+    ...                      "val3": [pd.NA, pd.NA, 23000, 78000]},
+    ...                     dtype=object)
     >>> from_indicators(pd.isna, data=data)
                        val1    val2   val3
     val1  val2  val3
@@ -197,7 +198,8 @@ def from_indicators(indicators, data=None):
             # column array
             indicators = data[indicators]
 
-    indicators = pd.DataFrame(indicators).fillna(False).infer_objects()
+    indicators = pd.DataFrame(indicators)
+    indicators = indicators.where(indicators.notna(), False).infer_objects()
     # drop all-False (should we be dropping all-True also? making an option?)
     indicators = indicators.loc[:, indicators.any(axis=0)]
 
@@ -300,8 +302,7 @@ def from_memberships(memberships, data=None):
     if df.shape[1] == 0:
         raise ValueError("Require at least one category. None were found.")
     df.sort_index(axis=1, inplace=True)
-    df.fillna(False, inplace=True)
-    df = df.astype(bool)
+    df = df.eq(True)
     df.set_index(list(df.columns), inplace=True)
     if data is None:
         return df.assign(ones=1)["ones"]
@@ -382,7 +383,7 @@ def from_contents(contents, data=None, id_column="id"):
     df = pd.concat(cat_series, axis=1, sort=False)
     if id_column in df.columns:
         raise ValueError("A category cannot be named %r" % id_column)
-    df.fillna(False, inplace=True)
+    df = df.eq(True)
     cat_names = list(df.columns)
 
     if data is not None:
@@ -396,7 +397,7 @@ def from_contents(contents, data=None, id_column="id"):
                 "Found identifiers in contents that are not in "
                 "data: %r" % not_in_data.index.values
             )
-        df = df.reindex(index=data.index).fillna(False)
+        df = df.reindex(index=data.index).eq(True)
         df = pd.concat([data, df], axis=1, sort=False)
     df.index.name = id_column
     return df.reset_index().set_index(cat_names)
