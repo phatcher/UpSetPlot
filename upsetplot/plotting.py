@@ -473,7 +473,7 @@ class UpSet:
         # TODO: colors should be broadcastable to data_df shape
         if callable(colors):
             colors = colors(range(data_df.shape[1]))
-        elif isinstance(colors, (str, type(None))):
+        elif isinstance(colors, str | None):
             colors = [colors] * len(data_df)
 
         if self._horizontal:
@@ -482,7 +482,7 @@ class UpSet:
         x = np.arange(len(data_df))
         cum_y = None
         all_rects = []
-        for (name, y), color in zip(data_df.items(), colors):
+        for (name, y), color in zip(data_df.items(), colors, strict=False):
             rects = ax.bar(
                 x,
                 y,
@@ -734,7 +734,10 @@ class UpSet:
             }
             cumsizes = np.cumsum(sizes[::-1])
             for start, stop, plot in zip(
-                np.hstack([[0], cumsizes]), cumsizes, self._subset_plots[::-1]
+                np.hstack([[0], cumsizes]),
+                cumsizes,
+                self._subset_plots[::-1],
+                strict=False,
             ):
                 out[plot["id"]] = gridspec[start:stop, -n_inters:]
         else:
@@ -748,7 +751,7 @@ class UpSet:
             }
             cumsizes = np.cumsum(sizes)
             for start, stop, plot in zip(
-                np.hstack([[0], cumsizes]), cumsizes, self._subset_plots
+                np.hstack([[0], cumsizes]), cumsizes, self._subset_plots, strict=False
             ):
                 out[plot["id"]] = gridspec[-n_inters:, start + n_cats : stop + n_cats]
         return out
@@ -858,14 +861,14 @@ class UpSet:
         rects = self._plot_bars(
             ax, self.intersections, title="Intersection size", colors=self._facecolor
         )
-        for style, rect in zip(self.subset_styles, rects):
+        for style, rect in zip(self.subset_styles, rects, strict=False):
             style = style.copy()
             style.setdefault("edgecolor", style.get("facecolor", self._facecolor))
             for attr, val in style.items():
                 getattr(rect, "set_" + attr)(val)
 
         if self.subset_legend:
-            styles, labels = zip(*self.subset_legend)
+            styles, labels = zip(*self.subset_legend, strict=False)
             styles = [patches.Patch(**patch_style) for patch_style in styles]
             ax.legend(styles, labels)
 
@@ -949,7 +952,7 @@ class UpSet:
         )
         self._label_sizes(ax, rects, "left" if self._horizontal else "top")
 
-        for category, rect in zip(self.totals.index.values, rects):
+        for category, rect in zip(self.totals.index.values, rects, strict=False):
             style = {
                 k[len("bar_") :]: v
                 for k, v in self.category_styles.get(category, {}).items()

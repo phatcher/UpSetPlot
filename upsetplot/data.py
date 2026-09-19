@@ -186,7 +186,7 @@ def from_indicators(indicators, data=None):
     except Exception:
         pass
     else:
-        if isinstance(indicators[0], (str, int)):
+        if isinstance(indicators[0], str | int):
             if data is None:
                 raise ValueError(
                     "data must be provided when indicators are "

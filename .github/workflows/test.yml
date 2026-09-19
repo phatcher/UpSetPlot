@@ -5,25 +5,27 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        conda-deps:
-          - python=3.8 pandas=1.0 matplotlib=3.1.2 numpy=1.17
-          - pandas matplotlib numpy
+        include:
+          - python-version: "3.10"
+            deps: pandas==1.3.4 numpy==1.21.6 matplotlib==3.5.0
+          - python-version: "3.12"
+            deps: pandas numpy matplotlib
+          - python-version: "3.13"
+            deps: pandas numpy matplotlib
+          - python-version: "3.14"
+            deps: pandas numpy matplotlib
     steps:
       - uses: actions/checkout@v4
-      - uses: conda-incubator/setup-miniconda@v3
+      - uses: actions/setup-python@v5
         with:
-          auto-update-conda: true
-      - name: conda debug info
-        shell: bash -el {0}
-        run: conda info -a
+          python-version: ${{ matrix.python-version }}
       - name: install
-        shell: bash -el {0}
         run: |
-          conda install pytest pytest-cov coveralls ${{ matrix.conda-deps }}
-          python setup.py install
+          python -m pip install --upgrade pip
+          pip install pytest pytest-cov ${{ matrix.deps }}
+          pip install .
           cp ci/matplotlibrc matplotlibrc
       - name: test
-        shell: bash -el {0}
         run: pytest
       - name: Coveralls
         uses: coverallsapp/github-action@v2

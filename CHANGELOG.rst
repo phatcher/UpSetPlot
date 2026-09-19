@@ -3,6 +3,8 @@ What's new in version 1.0
 
 In development
 
+- Require Python 3.10+, pandas 1.3.4+, matplotlib 3.5+ and numpy 1.21+.
+
 What's new in version 0.9
 -------------------------
 

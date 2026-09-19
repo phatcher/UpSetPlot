@@ -22,9 +22,9 @@ def setup_package():
             version=version,
             packages=["upsetplot"],
             license="BSD-3-Clause",
-            extras_require={"testing": ["pytest>=2.7", "pytest-cov<2.6"]},
-            # TODO: check versions
-            install_requires=["pandas>=0.23", "matplotlib>=2.0"],
+            python_requires=">=3.10",
+            extras_require={"testing": ["pytest", "pytest-cov"]},
+            install_requires=["pandas>=1.3.4", "matplotlib>=3.5", "numpy>=1.21"],
         )
     finally:
         del sys.path[0]

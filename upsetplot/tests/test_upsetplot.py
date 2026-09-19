@@ -425,7 +425,7 @@ def test_element_size():
         UpSet(X, element_size=element_size).make_grid(fig)
         figsizes.append((fig.get_figwidth(), fig.get_figheight()))
 
-    figwidths, figheights = zip(*figsizes)
+    figwidths, figheights = zip(*figsizes, strict=False)
     # Absolute width increases
     assert np.all(np.diff(figwidths) > 0)
     aspect = np.divide(figwidths, figheights)
@@ -580,7 +580,8 @@ def _get_patch_data(axes, is_vertical):
 def _get_color_to_label_from_legend(ax):
     handles, labels = ax.get_legend_handles_labels()
     color_to_label = {
-        patches[0].get_facecolor(): label for patches, label in zip(handles, labels)
+        patches[0].get_facecolor(): label
+        for patches, label in zip(handles, labels, strict=False)
     }
     return color_to_label
 
@@ -633,14 +634,14 @@ def test_add_stacked_bars(orientation, show_counts):
 
     if orientation == "horizontal":
         # order of labels in legend should match stack, top to bottom
-        for prev, curr in zip(label_order, label_order[1:]):
+        for prev, curr in zip(label_order, label_order[1:], strict=False):
             assert (
                 stacked_rects.query("label == @prev").sort_values("x")["y"].values
                 >= stacked_rects.query("label == @curr").sort_values("x")["y"].values
             ).all()
     else:
         # order of labels in legend should match stack, left to right
-        for prev, curr in zip(label_order, label_order[1:]):
+        for prev, curr in zip(label_order, label_order[1:], strict=False):
             assert (
                 stacked_rects.query("label == @prev").sort_values("x")["y"].values
                 <= stacked_rects.query("label == @curr").sort_values("x")["y"].values

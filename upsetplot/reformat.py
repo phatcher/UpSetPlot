@@ -88,7 +88,7 @@ def _check_index(df):
 
 
 def _scalar_to_list(val):
-    if not isinstance(val, (typing.Sequence, set)) or isinstance(val, str):
+    if not isinstance(val, typing.Sequence | set) or isinstance(val, str):
         val = [val]
     return val
 
