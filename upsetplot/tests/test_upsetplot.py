@@ -1,5 +1,6 @@
 import io
 import itertools
+import warnings
 
 import matplotlib.figure
 import matplotlib.pyplot as plt
@@ -165,7 +166,8 @@ def test_process_data_frame(x, sort_by, sort_categories_by):
 
     X = pd.DataFrame({"a": x})
 
-    with pytest.warns(None):
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
         total, df, intersections, totals = _process_data(
             X,
             sort_by=sort_by,
