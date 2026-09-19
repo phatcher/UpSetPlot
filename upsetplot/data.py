@@ -35,11 +35,11 @@ def generate_samples(seed=0, n_samples=10000, n_categories=3):
     df = pd.DataFrame({"value": np.zeros(n_samples)})
     for i in range(n_categories):
         r = rng.rand(n_samples)
-        df["cat%d" % i] = r > rng.rand()
+        df[f"cat{i}"] = r > rng.rand()
         df["value"] += r
 
     df.reset_index(inplace=True)
-    df.set_index(["cat%d" % i for i in range(n_categories)], inplace=True)
+    df.set_index([f"cat{i}" for i in range(n_categories)], inplace=True)
     return df
 
 
@@ -179,7 +179,7 @@ def from_indicators(indicators, data=None):
 
     if callable(indicators):
         if data is None:
-            raise ValueError("data must be provided when indicators is " "callable")
+            raise ValueError("data must be provided when indicators is callable")
         indicators = indicators(data)
 
     try:
@@ -295,7 +295,7 @@ def from_memberships(memberships, data=None):
     True  False False  6   7   8
     False False False  9  10  11
     """
-    df = pd.DataFrame([{name: True for name in names} for names in memberships])
+    df = pd.DataFrame([dict.fromkeys(names, True) for names in memberships])
     for set_name in df.columns:
         if not hasattr(set_name, "lower"):
             raise ValueError("Category names should be strings")
@@ -311,8 +311,7 @@ def from_memberships(memberships, data=None):
     if len(data) != len(df):
         raise ValueError(
             "memberships and data must have the same length. "
-            "Got len(memberships) == %d, len(data) == %d"
-            % (len(memberships), len(data))
+            f"Got len(memberships) == {len(memberships)}, len(data) == {len(data)}"
         )
     data.index = df.index
     return data
@@ -382,7 +381,7 @@ def from_contents(contents, data=None, id_column="id"):
 
     df = pd.concat(cat_series, axis=1, sort=False)
     if id_column in df.columns:
-        raise ValueError("A category cannot be named %r" % id_column)
+        raise ValueError(f"A category cannot be named {id_column!r}")
     df = df.eq(True)
     cat_names = list(df.columns)
 
@@ -390,12 +389,12 @@ def from_contents(contents, data=None, id_column="id"):
         if set(df.columns).intersection(data.columns):
             raise ValueError("Data columns overlap with category names")
         if id_column in data.columns:
-            raise ValueError("data cannot contain a column named %r" % id_column)
+            raise ValueError(f"data cannot contain a column named {id_column!r}")
         not_in_data = df.drop(data.index, axis=0, errors="ignore")
         if len(not_in_data):
             raise ValueError(
                 "Found identifiers in contents that are not in "
-                "data: %r" % not_in_data.index.values
+                f"data: {not_in_data.index.values!r}"
             )
         df = df.reindex(index=data.index).eq(True)
         df = pd.concat([data, df], axis=1, sort=False)

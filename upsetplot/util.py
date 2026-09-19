@@ -1,4 +1,5 @@
 """Generic utilities"""
+
 import re
 
 # The below is adapted from an answer to

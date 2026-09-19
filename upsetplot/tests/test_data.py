@@ -121,7 +121,8 @@ def test_from_contents_vs_memberships(data, typ, id_column):
     )
 
 
-def test_from_contents(typ=set, id_column="id"):
+def test_from_contents():
+    id_column = "id"
     contents = OrderedDict(
         [("cat1", {"aa", "bb", "cc"}), ("cat2", {"cc", "dd"}), ("cat3", {"ee"})]
     )
@@ -234,5 +235,5 @@ def test_from_indicators_equivalence(indicators, data):
 
 
 def test_generate_data_warning():
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(DeprecationWarning, match="generate_data was replaced"):
         generate_data()

@@ -15,7 +15,7 @@ jobs:
             pip install .
         - name: Lint with Ruff
           run: |
-            pip install ruff
-            ruff --output-format=github .
+            pip install ruff==0.16.8
+            ruff check --output-format=github .
         - name: Check format with ruff
           run: ruff format --check

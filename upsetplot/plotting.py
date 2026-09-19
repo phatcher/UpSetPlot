@@ -522,10 +522,8 @@ class UpSet:
         elif isinstance(colors, typing.Mapping):
             colors = data.columns.map(colors).values
             if pd.isna(colors).any():
-                raise KeyError(
-                    "Some labels mapped by colors: %r"
-                    % data.columns[pd.isna(colors)].tolist()
-                )
+                unmapped = data.columns[pd.isna(colors)].tolist()
+                raise KeyError(f"Some labels mapped by colors: {unmapped!r}")
 
         self._plot_bars(ax, data=data, colors=colors, title=title, use_labels=True)
 
@@ -586,7 +584,7 @@ class UpSet:
                 "sum_over": sum_over,
                 "colors": colors,
                 "title": title,
-                "id": "extra%d" % len(self._subset_plots),
+                "id": f"extra{len(self._subset_plots)}",
                 "elements": elements,
             }
         )
@@ -617,17 +615,17 @@ class UpSet:
         if value is None:
             if "_value" not in self._df.columns:
                 raise ValueError(
-                    "value cannot be set if data is a Series. " "Got %r" % value
+                    f"value cannot be set if data is a Series. Got {value!r}"
                 )
         else:
             if value not in self._df.columns:
-                raise ValueError("value %r is not a column in data" % value)
+                raise ValueError(f"value {value!r} is not a column in data")
         self._subset_plots.append(
             {
                 "type": "catplot",
                 "value": value,
                 "kind": kind,
-                "id": "extra%d" % len(self._subset_plots),
+                "id": f"extra{len(self._subset_plots)}",
                 "elements": elements,
                 "kw": kw,
             }
@@ -937,7 +935,7 @@ class UpSet:
                     va="bottom",
                 )
         else:
-            raise NotImplementedError("unhandled where: %r" % where)
+            raise NotImplementedError(f"unhandled where: {where!r}")
 
     def plot_totals(self, ax):
         """Plot bars indicating total set size"""
@@ -995,7 +993,7 @@ class UpSet:
                 self._swapaxes(start_x, i - 0.4),
                 *self._swapaxes(end_x, 0.8),
                 facecolor=shading_style.get("facecolor", default_shading),
-                edgecolor=shading_style.get("edgecolor", None),
+                edgecolor=shading_style.get("edgecolor"),
                 ls=shading_style.get("linestyle", "-"),
                 lw=lw,
                 zorder=0,
@@ -1119,7 +1117,7 @@ class UpSet:
                 del kw["id"]
                 self.PLOT_TYPES[plot["type"]](self, ax, **kw)
             else:
-                raise ValueError("Unknown subset plot type: %r" % plot["type"])
+                raise ValueError("Unknown subset plot type: {!r}".format(plot["type"]))
             out[plot["id"]] = ax
 
         self._reorient(fig).align_ylabels(
