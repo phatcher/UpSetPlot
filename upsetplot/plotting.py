@@ -329,7 +329,9 @@ class UpSet:
     ):
         _COUNTS_VALUES = ["exact", "at_least", "both"]
         if counts not in _COUNTS_VALUES:
-            raise ValueError(f"counts should be one of {_COUNTS_VALUES}. Got {counts!r}")
+            raise ValueError(
+                f"counts should be one of {_COUNTS_VALUES}. Got {counts!r}"
+            )
         self._counts = counts
         self._horizontal = orientation == "horizontal"
         self._reorient = _identity if self._horizontal else _transpose
@@ -993,7 +995,7 @@ class UpSet:
                 return (val / self.total,)
 
         if where == "right":
-            margin = 0.01 * abs(np.diff(ax.get_xlim()))
+            margin = 0.01 * abs(np.diff(ax.get_xlim())[0])
             if negative:
                 margin = -margin
             for rect in rects:
@@ -1006,7 +1008,7 @@ class UpSet:
                     va="center",
                 )
         elif where == "left":
-            margin = 0.01 * abs(np.diff(ax.get_xlim()))
+            margin = 0.01 * abs(np.diff(ax.get_xlim())[0])
             for rect in rects:
                 width = rect.get_width() + rect.get_x()
                 ax.text(
@@ -1017,7 +1019,7 @@ class UpSet:
                     va="center",
                 )
         elif where == "top":
-            margin = 0.01 * abs(np.diff(ax.get_ylim()))
+            margin = 0.01 * abs(np.diff(ax.get_ylim())[0])
             if negative:
                 margin = -margin
             for rect in rects:

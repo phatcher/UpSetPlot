@@ -517,6 +517,19 @@ def test_show_counts(orientation):
         plot(X, fig, orientation=orientation, show_counts="%0.2h")
 
 
+@pytest.mark.parametrize("orientation", ["horizontal", "vertical"])
+@pytest.mark.parametrize("counts", ["exact", "at_least", "both"])
+def test_show_counts_positions_are_scalars(orientation, counts):
+    # array positions fail when drawn with numpy >= 2.4
+    fig = matplotlib.figure.Figure()
+    X = generate_counts(n_samples=100)
+    plot(X, fig, orientation=orientation, counts=counts, show_counts=True)
+    texts = [artist for ax in fig.axes for artist in ax.texts]
+    assert texts
+    for text in texts:
+        assert all(np.ndim(coord) == 0 for coord in text.get_position())
+
+
 def test_add_catplot():
     pytest.importorskip("seaborn")
     X = generate_counts(n_samples=100)
@@ -1262,7 +1275,9 @@ def test_counts_invalid():
 
 def test_inclusive_intersections_attribute():
     upset = UpSet(COUNTS_DATA, subset_size="count", sort_by="degree")
-    sizes = dict(zip(upset.intersections.index, upset.inclusive_intersections))
+    sizes = dict(
+        zip(upset.intersections.index, upset.inclusive_intersections, strict=True)
+    )
 
     assert sizes[(True, False, False)] == 3  # A, AB and ABC
     assert sizes[(True, True, False)] == 2  # AB and ABC
