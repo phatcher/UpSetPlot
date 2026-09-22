@@ -13,7 +13,13 @@ from matplotlib.text import Text
 from numpy.testing import assert_array_equal
 from pandas.testing import assert_frame_equal, assert_index_equal, assert_series_equal
 
-from upsetplot import UpSet, generate_counts, generate_samples, plot
+from upsetplot import (
+    UpSet,
+    from_memberships,
+    generate_counts,
+    generate_samples,
+    plot,
+)
 from upsetplot.plotting import _process_data
 
 # TODO: warnings should raise errors
@@ -59,7 +65,7 @@ def test_process_data_series(x, sort_by, sort_categories_by):
     # shuffle input to test sorting
     x = x.sample(frac=1.0, replace=False, random_state=0)
 
-    total, df, intersections, totals = _process_data(
+    total, df, intersections, _, totals = _process_data(
         x,
         subset_size="auto",
         sort_by=sort_by,
@@ -123,13 +129,13 @@ def test_subset_size_series(x):
         "sort_categories_by": "cardinality",
         "sum_over": None,
     }
-    total, df_sum, intersections_sum, totals_sum = _process_data(
+    total, df_sum, intersections_sum, _, totals_sum = _process_data(
         x, subset_size="sum", **kw
     )
     assert total == intersections_sum.sum()
 
     if x.index.is_unique:
-        total, df, intersections, totals = _process_data(x, subset_size="auto", **kw)
+        total, df, intersections, _, totals = _process_data(x, subset_size="auto", **kw)
         assert total == intersections.sum()
         assert_frame_equal(df, df_sum)
         assert_series_equal(intersections, intersections_sum)
@@ -138,11 +144,11 @@ def test_subset_size_series(x):
         with pytest.raises(ValueError):
             _process_data(x, subset_size="auto", **kw)
 
-    total, df_count, intersections_count, totals_count = _process_data(
+    total, df_count, intersections_count, _, totals_count = _process_data(
         x, subset_size="count", **kw
     )
     assert total == intersections_count.sum()
-    total, df, intersections, totals = _process_data(
+    total, df, intersections, _, totals = _process_data(
         x.groupby(level=list(range(len(x.index.levels)))).count(),
         subset_size="sum",
         **kw,
@@ -168,7 +174,7 @@ def test_process_data_frame(x, sort_by, sort_categories_by):
 
     with warnings.catch_warnings():
         warnings.simplefilter("error")
-        total, df, intersections, totals = _process_data(
+        total, df, intersections, _, totals = _process_data(
             X,
             sort_by=sort_by,
             sort_categories_by=sort_categories_by,
@@ -179,7 +185,7 @@ def test_process_data_frame(x, sort_by, sort_categories_by):
     assert total == pytest.approx(intersections.sum())
 
     # check equivalence to Series
-    total1, df1, intersections1, totals1 = _process_data(
+    total1, df1, intersections1, _, totals1 = _process_data(
         x,
         sort_by=sort_by,
         sort_categories_by=sort_categories_by,
@@ -194,7 +200,7 @@ def test_process_data_frame(x, sort_by, sort_categories_by):
 
     # check effect of extra column
     X = pd.DataFrame({"a": x, "b": np.arange(len(x))})
-    total2, df2, intersections2, totals2 = _process_data(
+    total2, df2, intersections2, _, totals2 = _process_data(
         X,
         sort_by=sort_by,
         sort_categories_by=sort_categories_by,
@@ -209,7 +215,7 @@ def test_process_data_frame(x, sort_by, sort_categories_by):
 
     # check effect not dependent on order/name
     X = pd.DataFrame({"b": np.arange(len(x)), "c": x})
-    total3, df3, intersections3, totals3 = _process_data(
+    total3, df3, intersections3, _, totals3 = _process_data(
         X,
         sort_by=sort_by,
         sort_categories_by=sort_categories_by,
@@ -227,14 +233,14 @@ def test_process_data_frame(x, sort_by, sort_categories_by):
     # check subset_size='count'
     X = pd.DataFrame({"b": np.ones(len(x), dtype="int64"), "c": x})
 
-    total4, df4, intersections4, totals4 = _process_data(
+    total4, df4, intersections4, _, totals4 = _process_data(
         X,
         sort_by=sort_by,
         sort_categories_by=sort_categories_by,
         sum_over="b",
         subset_size="auto",
     )
-    total5, df5, intersections5, totals5 = _process_data(
+    total5, df5, intersections5, _, totals5 = _process_data(
         X,
         sort_by=sort_by,
         sort_categories_by=sort_categories_by,
@@ -259,10 +265,10 @@ def test_process_data_frame(x, sort_by, sort_categories_by):
 def test_subset_size_frame(x):
     kw = {"sort_by": "cardinality", "sort_categories_by": "cardinality"}
     X = pd.DataFrame({"x": x})
-    total_sum, df_sum, intersections_sum, totals_sum = _process_data(
+    total_sum, df_sum, intersections_sum, _, totals_sum = _process_data(
         X, subset_size="sum", sum_over="x", **kw
     )
-    total_count, df_count, intersections_count, totals_count = _process_data(
+    total_count, df_count, intersections_count, _, totals_count = _process_data(
         X, subset_size="count", sum_over=None, **kw
     )
 
@@ -281,7 +287,7 @@ def test_subset_size_frame(x):
         _process_data(X, subset_size="count", sum_over="x", **kw)
 
     # check subset_size='auto' with sum_over=str => sum
-    total, df, intersections, totals = _process_data(
+    total, df, intersections, _, totals = _process_data(
         X, subset_size="auto", sum_over="x", **kw
     )
     assert total == intersections.sum()
@@ -290,7 +296,7 @@ def test_subset_size_frame(x):
     assert_series_equal(totals, totals_sum)
 
     # check subset_size='auto' with sum_over=None => count
-    total, df, intersections, totals = _process_data(
+    total, df, intersections, _, totals = _process_data(
         X, subset_size="auto", sum_over=None, **kw
     )
     assert total == intersections.sum()
@@ -309,10 +315,10 @@ def test_not_unique(sort_by, sort_categories_by):
         "sum_over": None,
     }
     Xagg = generate_counts()
-    total1, df1, intersections1, totals1 = _process_data(Xagg, **kw)
+    total1, df1, intersections1, _, totals1 = _process_data(Xagg, **kw)
     Xunagg = generate_samples()["value"]
     Xunagg.loc[:] = 1
-    total2, df2, intersections2, totals2 = _process_data(Xunagg, **kw)
+    total2, df2, intersections2, _, totals2 = _process_data(Xunagg, **kw)
     assert_series_equal(intersections1, intersections2, check_dtype=False)
     assert total2 == intersections2.sum()
     assert_series_equal(totals1, totals2, check_dtype=False)
@@ -1235,3 +1241,88 @@ def test_many_categories():
     data["value"] = 1
     data = data.set_index(columns)["value"]
     UpSet(data)
+
+
+# One item in each of A only, AB, ABC and none: no item is in exactly AC or BC
+COUNTS_DATA = from_memberships([["A"], ["A", "B"], ["A", "B", "C"], []])
+
+
+def _intersection_bar_sizes(axes, orientation):
+    """Signed bar sizes of the intersections plot, in drawing order"""
+    patches = axes["intersections"].patches
+    if orientation == "horizontal":
+        return [patch.get_height() for patch in patches]
+    return [patch.get_width() for patch in patches]
+
+
+def test_counts_invalid():
+    with pytest.raises(ValueError, match="counts should be one of"):
+        UpSet(COUNTS_DATA, subset_size="count", counts="inclusive")
+
+
+def test_inclusive_intersections_attribute():
+    upset = UpSet(COUNTS_DATA, subset_size="count", sort_by="degree")
+    sizes = dict(zip(upset.intersections.index, upset.inclusive_intersections))
+
+    assert sizes[(True, False, False)] == 3  # A, AB and ABC
+    assert sizes[(True, True, False)] == 2  # AB and ABC
+    assert sizes[(True, True, True)] == 1
+    assert (upset.inclusive_intersections >= upset.intersections).all()
+
+
+@pytest.mark.parametrize("orientation", ["horizontal", "vertical"])
+def test_counts_exact_is_default(orientation):
+    kw = {"subset_size": "count", "orientation": orientation}
+    default = UpSet(COUNTS_DATA, **kw)
+    exact = UpSet(COUNTS_DATA, counts="exact", **kw)
+
+    assert _intersection_bar_sizes(
+        default.plot(), orientation
+    ) == _intersection_bar_sizes(exact.plot(), orientation)
+    assert _intersection_bar_sizes(exact.plot(), orientation) == list(
+        exact.intersections
+    )
+
+
+@pytest.mark.parametrize("orientation", ["horizontal", "vertical"])
+def test_counts_at_least(orientation):
+    upset = UpSet(
+        COUNTS_DATA, subset_size="count", orientation=orientation, counts="at_least"
+    )
+
+    assert _intersection_bar_sizes(upset.plot(), orientation) == list(
+        upset.inclusive_intersections
+    )
+
+
+@pytest.mark.parametrize("orientation", ["horizontal", "vertical"])
+def test_counts_both(orientation):
+    upset = UpSet(
+        COUNTS_DATA, subset_size="count", orientation=orientation, counts="both"
+    )
+    sizes = _intersection_bar_sizes(upset.plot(), orientation)
+
+    n = len(upset.intersections)
+    assert sizes[:n] == list(upset.inclusive_intersections)
+    assert sizes[n:] == [-size for size in upset.intersections]
+
+
+def test_counts_both_labels_each_bar():
+    upset = UpSet(COUNTS_DATA, subset_size="count", counts="both", show_counts=True)
+    axes = upset.plot()
+    # the legend also holds text, so keep only the bar labels
+    texts = [text for text in get_all_texts(axes["intersections"]) if text.isdigit()]
+
+    expected = [str(size) for size in upset.inclusive_intersections] + [
+        str(size) for size in upset.intersections
+    ]
+    # every bar is labelled, and the exact ones are not labelled negative
+    assert sorted(texts) == sorted(expected)
+
+
+def test_counts_both_keeps_totals_and_percentages_exact():
+    upset = UpSet(COUNTS_DATA, subset_size="count", counts="both")
+    exact = UpSet(COUNTS_DATA, subset_size="count")
+
+    assert upset.total == exact.total
+    assert_series_equal(upset.totals, exact.totals)

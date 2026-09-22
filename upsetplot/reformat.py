@@ -143,6 +143,34 @@ def _get_subset_mask(
     return subset_mask
 
 
+def _pack_masks(index, names):
+    """Pack each combination in index into one integer, bit per category"""
+    frame = index.to_frame(index=False)[names]
+    # use objects if arbitrary precision integers are needed
+    dtype = np.object_ if len(names) > 62 else np.uint64
+    masks = np.zeros(len(frame), dtype=dtype)
+    for name in names:
+        masks = masks * 2 + frame[name].to_numpy().astype(bool)
+    return masks
+
+
+def _inclusive_subset_sizes(all_agg, index):
+    """Size of each subset in index, counting items in at least its categories
+
+    Unlike ``all_agg``, which gives the size of each exact combination of
+    categories, this counts an item under every combination it contains. An
+    item in categories A, B and C is therefore counted under AB as well as
+    under ABC. Sizes are calculated over all of ``all_agg``, so filtered-out
+    subsets still contribute.
+    """
+    names = list(index.names)
+    source = _pack_masks(all_agg.index, names)
+    target = _pack_masks(index, names)
+    values = all_agg.to_numpy()
+    sizes = [values[(source & mask) == mask].sum() for mask in target]
+    return pd.Series(sizes, index=index, dtype=all_agg.dtype, name=all_agg.name)
+
+
 def _filter_subsets(
     df,
     agg,
@@ -186,15 +214,23 @@ class QueryResult:
     subset_sizes : Series
         Total size of each selected subset as a series. The index is as
         for `data`.
+    inclusive_subset_sizes : Series
+        Total size of each selected subset, counting items belonging to at
+        least its categories, rather than exactly them. The index is as for
+        `subset_sizes`. Items in subsets excluded by filtering are still
+        counted.
     category_totals : Series
         Total size of each category, regardless of selection.
     total : number
         Total number of samples, or sum of sum_over value.
     """
 
-    def __init__(self, data, subset_sizes, category_totals, total):
+    def __init__(
+        self, data, subset_sizes, category_totals, total, inclusive_subset_sizes=None
+    ):
         self.data = data
         self.subset_sizes = subset_sizes
+        self.inclusive_subset_sizes = inclusive_subset_sizes
         self.category_totals = category_totals
         self.total = total
 
@@ -388,6 +424,7 @@ def query(
         new_agg.update(agg)
         agg = new_agg
 
+    all_agg = agg
     data, agg = _filter_subsets(
         data,
         agg,
@@ -433,5 +470,9 @@ def query(
         raise ValueError(f"Unknown sort_by: {sort_by!r}")
 
     return QueryResult(
-        data=data, subset_sizes=agg, category_totals=category_totals, total=grand_total
+        data=data,
+        subset_sizes=agg,
+        inclusive_subset_sizes=_inclusive_subset_sizes(all_agg, agg.index),
+        category_totals=category_totals,
+        total=grand_total,
     )

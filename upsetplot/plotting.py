@@ -70,10 +70,12 @@ def _process_data(
             np.arange(len(data_packed))[:: -1 if reverse else 1], index=data_packed
         )
     )
+    inclusive_agg = results.inclusive_subset_sizes
     if reverse:
         agg = agg[::-1]
+        inclusive_agg = inclusive_agg[::-1]
 
-    return results.total, df, agg, results.category_totals
+    return results.total, df, agg, inclusive_agg, results.category_totals
 
 
 def _multiply_alpha(c, mult):
@@ -278,9 +280,26 @@ class UpSet:
     include_empty_subsets : bool (default=False)
         If True, all possible category combinations will be shown as subsets,
         even when some are not present in data.
+    counts : {'exact', 'at_least', 'both'} (default='exact')
+        What the intersection bars count for each subset. Choices are:
+
+        'exact' (default)
+            Items belonging to exactly that combination of categories.
+        'at_least'
+            Items belonging to at least that combination of categories, so an
+            item in categories A, B and C is counted under AB as well as ABC.
+        'both'
+            Both: 'at_least' above the axis and 'exact' below it.
+
+        Category totals, percentages and the selection of subsets to show are
+        always based on exact sizes, as are `add_catplot` and
+        `add_stacked_bars`.
+
+        .. versionadded:: 1.0
     """
 
     _default_figsize = (10, 6)
+    _EXACT_BAR_ALPHA = 0.5  # dims the exact bars when counts="both"
     DPI = 100  # standard matplotlib value
 
     def __init__(
@@ -306,7 +325,12 @@ class UpSet:
         show_counts="",
         show_percentages=False,
         include_empty_subsets=False,
+        counts="exact",
     ):
+        _COUNTS_VALUES = ["exact", "at_least", "both"]
+        if counts not in _COUNTS_VALUES:
+            raise ValueError(f"counts should be one of {_COUNTS_VALUES}. Got {counts!r}")
+        self._counts = counts
         self._horizontal = orientation == "horizontal"
         self._reorient = _identity if self._horizontal else _transpose
         if facecolor == "auto":
@@ -340,7 +364,13 @@ class UpSet:
         self._show_counts = show_counts
         self._show_percentages = show_percentages
 
-        (self.total, self._df, self.intersections, self.totals) = _process_data(
+        (
+            self.total,
+            self._df,
+            self.intersections,
+            self.inclusive_intersections,
+            self.totals,
+        ) = _process_data(
             data,
             sort_by=sort_by,
             sort_categories_by=sort_categories_by,
@@ -854,23 +884,84 @@ class UpSet:
         ax.set_xlim(-0.5, x[-1] + 0.5, auto=False)
         ax.grid(False)
 
-    def plot_intersections(self, ax):
-        """Plot bars indicating intersection size"""
-        rects = self._plot_bars(
-            ax, self.intersections, title="Intersection size", colors=self._facecolor
-        )
+    def _style_bars(self, rects, dim=None):
         for style, rect in zip(self.subset_styles, rects, strict=False):
             style = style.copy()
             style.setdefault("edgecolor", style.get("facecolor", self._facecolor))
             for attr, val in style.items():
+                if dim is not None and attr in ("facecolor", "edgecolor"):
+                    val = _multiply_alpha(val, dim)
                 getattr(rect, "set_" + attr)(val)
 
-        if self.subset_legend:
-            styles, labels = zip(*self.subset_legend, strict=False)
+    def _plot_dual_bars(self, ax):
+        """Plot at-least sizes above the axis and exact sizes below it"""
+        ax = self._reorient(ax)
+        ax.set_autoscalex_on(False)
+        x = np.arange(len(self.intersections))
+        inclusive_rects = ax.bar(
+            x,
+            self.inclusive_intersections,
+            0.5,
+            color=self._facecolor,
+            zorder=10,
+            align="center",
+        )
+        exact_rects = ax.bar(
+            x,
+            -self.intersections,
+            0.5,
+            color=_multiply_alpha(self._facecolor, self._EXACT_BAR_ALPHA),
+            zorder=10,
+            align="center",
+        )
+        self._style_bars(inclusive_rects)
+        self._style_bars(exact_rects, dim=self._EXACT_BAR_ALPHA)
+
+        where = "top" if self._horizontal else "right"
+        self._label_sizes(ax, inclusive_rects, where)
+        self._label_sizes(ax, exact_rects, where, negative=True)
+
+        ax.axhline(0, color=self._facecolor, lw=0.8, alpha=0.4, zorder=5)
+        ax.xaxis.set_visible(False)
+        for spine in ["top", "bottom", "right"]:
+            ax.spines[self._reorient(spine)].set_visible(False)
+        ax.yaxis.grid(True)
+        ax.set_ylabel("Intersection size")
+
+    def plot_intersections(self, ax):
+        """Plot bars indicating intersection size"""
+        legend = []
+        if self._counts == "both":
+            self._plot_dual_bars(ax)
+            legend = [
+                ({"facecolor": self._facecolor}, "At least these categories"),
+                (
+                    {
+                        "facecolor": _multiply_alpha(
+                            self._facecolor, self._EXACT_BAR_ALPHA
+                        )
+                    },
+                    "Exactly these categories",
+                ),
+            ]
+        else:
+            sizes = (
+                self.intersections
+                if self._counts == "exact"
+                else self.inclusive_intersections
+            )
+            rects = self._plot_bars(
+                ax, sizes, title="Intersection size", colors=self._facecolor
+            )
+            self._style_bars(rects)
+
+        legend += self.subset_legend
+        if legend:
+            styles, labels = zip(*legend, strict=False)
             styles = [patches.Patch(**patch_style) for patch_style in styles]
             ax.legend(styles, labels)
 
-    def _label_sizes(self, ax, rects, where):
+    def _label_sizes(self, ax, rects, where, negative=False):
         if not self._show_counts and not self._show_percentages:
             return
         if self._show_counts is True:
@@ -903,13 +994,15 @@ class UpSet:
 
         if where == "right":
             margin = 0.01 * abs(np.diff(ax.get_xlim()))
+            if negative:
+                margin = -margin
             for rect in rects:
                 width = rect.get_width() + rect.get_x()
                 ax.text(
                     width + margin,
                     rect.get_y() + rect.get_height() * 0.5,
-                    fmt.format(*make_args(width)),
-                    ha="left",
+                    fmt.format(*make_args(abs(width))),
+                    ha="right" if negative else "left",
                     va="center",
                 )
         elif where == "left":
@@ -925,14 +1018,16 @@ class UpSet:
                 )
         elif where == "top":
             margin = 0.01 * abs(np.diff(ax.get_ylim()))
+            if negative:
+                margin = -margin
             for rect in rects:
                 height = rect.get_height() + rect.get_y()
                 ax.text(
                     rect.get_x() + rect.get_width() * 0.5,
                     height + margin,
-                    fmt.format(*make_args(height)),
+                    fmt.format(*make_args(abs(height))),
                     ha="center",
-                    va="bottom",
+                    va="top" if negative else "bottom",
                 )
         else:
             raise NotImplementedError(f"unhandled where: {where!r}")

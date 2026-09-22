@@ -83,6 +83,7 @@ Thumbs.db
 !np_datetime_strings.c
 *.c
 *.cpp
+tmp/
 
 .pytest_cache
 .envrc

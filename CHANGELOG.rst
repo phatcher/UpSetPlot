@@ -3,6 +3,9 @@ What's new in version 1.0
 
 In development
 
+- Added ``counts`` to ``UpSet`` and ``plot`` to size intersection bars by the
+  items in at least a subset's categories, rather than exactly them, or to
+  show both. ``query`` results gain ``inclusive_subset_sizes``.
 - Require Python 3.10+, pandas 1.3.4+, matplotlib 3.5+ and numpy 1.21+.
 
 What's new in version 0.9
